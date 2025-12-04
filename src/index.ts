@@ -207,7 +207,112 @@ function createMcpServer(): McpServer {
     }
   );
 
-  // Tool 4: Generate PDF
+  // Tool 4: HTML to PDF
+  server.registerTool(
+    "html_to_pdf",
+    {
+      title: "HTML to PDF",
+      description: "Convert HTML content to a PDF document. Automatically handles long-running renders by polling for completion.",
+      inputSchema: {
+        apiKey: z.string().describe("Your PDFNoodle API key"),
+        html: z.string().describe("The HTML content you want to render"),
+        pdfParams: z.string().optional().describe("JSON string of PDF parameters (e.g., page size, margins). See PDFNoodle docs for options."),
+        convertToImage: z.boolean().optional().describe("If true, returns a PNG file instead of PDF (default: false)"),
+        metadata: z.string().optional().describe("JSON string of PDF metadata (e.g., title, author)"),
+        hasCover: z.boolean().optional().describe("If true, hides header/footer on the first page (default: false)"),
+        waitForCompletion: z.boolean().optional().describe("If true (default), waits for async renders to complete. Set to false to get the requestId immediately for long renders."),
+      },
+    },
+    async ({ apiKey, html, pdfParams, convertToImage, metadata, hasCover, waitForCompletion = true }) => {
+      try {
+        const payload: Record<string, unknown> = { html };
+
+        if (pdfParams) {
+          try {
+            payload.pdfParams = JSON.parse(pdfParams);
+          } catch {
+            throw new Error("Invalid JSON provided for 'pdfParams' parameter");
+          }
+        }
+
+        if (metadata) {
+          try {
+            payload.metadata = JSON.parse(metadata);
+          } catch {
+            throw new Error("Invalid JSON provided for 'metadata' parameter");
+          }
+        }
+
+        if (convertToImage !== undefined) {
+          payload.convertToImage = convertToImage;
+        }
+
+        if (hasCover !== undefined) {
+          payload.hasCover = hasCover;
+        }
+
+        const { status, data: result } = await callApi<PdfSuccessResponse | PdfQueuedResponse>(
+          apiKey,
+          "html-to-pdf/sync",
+          "POST",
+          payload
+        );
+
+        // Immediate success (rendered in <30 seconds)
+        if (status === 200) {
+          const successResult = result as PdfSuccessResponse;
+          const fileType = convertToImage ? "PNG" : "PDF";
+          return {
+            content: [
+              {
+                type: "text",
+                text: `${fileType} Generated Successfully!\nDownload URL: ${successResult.signedUrl}\nExecution time: ${successResult.metadata?.executionTime || "N/A"}\nFile size: ${successResult.metadata?.fileSize || "N/A"}`,
+              },
+            ],
+          };
+        }
+
+        // Queued for async processing (>30 seconds timeout)
+        if (status === 202) {
+          const queuedResult = result as PdfQueuedResponse;
+
+          if (!waitForCompletion) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `PDF generation queued (taking longer than 30 seconds).\nRequest ID: ${queuedResult.requestId}\nUse the check_pdf_status tool to monitor progress.`,
+                },
+              ],
+            };
+          }
+
+          // Poll for completion
+          const finalResult = await pollForPdfCompletion(apiKey, queuedResult.requestId);
+          const fileType = convertToImage ? "PNG" : "PDF";
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: `${fileType} Generated Successfully (async)!\nDownload URL: ${finalResult.signedUrl}\nExecution time: ${finalResult.metadata?.executionTime || "N/A"}\nFile size: ${finalResult.metadata?.fileSize || "N/A"}`,
+              },
+            ],
+          };
+        }
+
+        throw new Error(`Unexpected response status: ${status}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text", text: `Error converting HTML to PDF: ${message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 5: Generate PDF
   server.registerTool(
     "generate_pdf",
     {
