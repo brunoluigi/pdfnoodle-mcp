@@ -1,0 +1,17 @@
+# Project Context: PDForge MCP Server
+
+## Architecture
+- **Type**: Model Context Protocol (MCP) Server
+- **Language**: TypeScript (NodeNext module)
+- **Transport**: Express handling SSE (Server-Sent Events) for remote connectivity.
+- **Deployment**: Dockerized via Kamal.
+
+## Key Files
+- `src/index.ts`: Entry point. Configures Express, MCP tools, and SSE transport.
+- `config/deploy.yml`: Kamal deployment configuration.
+
+## Coding Standards
+- Use `zod` for all Tool input validation.
+- All async operations must have try/catch blocks returning `isError: true` on failure.
+- Do not use `console.log` for debugging in production; rely on returning text content to the client.
+
