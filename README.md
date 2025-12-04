@@ -6,6 +6,7 @@ A Model Context Protocol (MCP) server that enables AI assistants to generate PDF
 
 - **List Templates** – Retrieve available PDF templates
 - **Get Template Variables** – Inspect required variables for a template
+- **HTML to PDF** – Convert raw HTML content to PDF or PNG
 - **Generate PDF** – Create PDFs from templates with automatic async handling
 - **Check PDF Status** – Monitor long-running PDF generation requests
 
@@ -77,6 +78,30 @@ Get variables required by a template.
 ```json
 { "apiKey": "...", "templateId": "invoice-001" }
 ```
+
+### `html_to_pdf`
+
+Convert HTML content to PDF or PNG. Automatically handles long-running renders (>30s).
+
+```json
+{
+  "apiKey": "...",
+  "html": "<html><body><h1>Hello World</h1></body></html>",
+  "pdfParams": "{\"format\": \"A4\"}",
+  "convertToImage": false,
+  "hasCover": false
+}
+```
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `apiKey` | Yes | Your PDFNoodle API key |
+| `html` | Yes | The HTML content to render |
+| `pdfParams` | No | JSON string of PDF parameters |
+| `convertToImage` | No | If true, returns PNG instead of PDF |
+| `metadata` | No | JSON string of PDF metadata |
+| `hasCover` | No | If true, hides header/footer on first page |
+| `waitForCompletion` | No | If false, returns requestId immediately for long renders |
 
 ### `generate_pdf`
 
