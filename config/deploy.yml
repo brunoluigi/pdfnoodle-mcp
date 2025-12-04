@@ -1,31 +1,29 @@
 service: pdfnoodle-mcp
+
 image: pdfnoodle-mcp
 
 servers:
   web:
     hosts:
-      - 188.245.248.153 # REPLACE with your server IP
-    labels:
-      traefik.http.routers.pdfnoodle.rule: Host(`pdfnoodle-mcp.passionfruits.dev`)
-      traefik.http.routers.pdfnoodle.entrypoints: websecure
-      traefik.http.routers.pdfnoodle.tls.certresolver: letsencrypt
+      - 188.245.248.153
+
+proxy:
+  ssl: true
+  host: pdfnoodle-mcp.passionfruits.dev
+  app_port: 3000
+  healthcheck:
+    path: /health
+    interval: 3
+    timeout: 3
 
 registry:
-  # echo $CR_PAT | docker login ghcr.io -u YOUR_USERNAME --password-stdin
-  server: ghcr.io
-  username: your-github-username
-  password:
-    - KAMAAL_REGISTRY_PASSWORD
+  server: localhost:5555
+
+builder:
+  arch: amd64
 
 env:
   clear:
     PORT: 3000
-    PDFORGE_API_BASE: "https://api.pdfnoodle.com/v1/" # Verify this!
-
-# Use a healthcheck that fits MCP (which might not have a simple GET /)
-# or add a generic /health endpoint to express if needed.
-healthcheck:
-  path: /health
-  port: 3000
-  interval: 10s
+    PDFNOODLE_API_BASE: "https://api.pdfnoodle.com/v1/"
 
